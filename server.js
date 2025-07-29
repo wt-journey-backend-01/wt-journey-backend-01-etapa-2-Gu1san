@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
-const agentesRoutes = require("./routes/casosRoutes");
-const casosRoutes = require("./routes/agentesRoutes");
+const agentesRoutes = require("./routes/agentesRoutes");
+const casosRoutes = require("./routes/casosRoutes");
 const PORT = 3000;
 
 app.use(express.json());

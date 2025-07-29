@@ -1,5 +1,5 @@
 const casosRepository = require("../repositories/casosRepository");
-const { verifyStatus } = require("../utils/erroHandler");
+const { verifyStatus, validadeAgent } = require("../utils/erroHandler");
 
 // GET /casos
 function getAllCasos(req, res) {
@@ -20,6 +20,9 @@ function createCaso(req, res) {
   if (!titulo || !descricao || !status || !agente_id) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
+  if (!validadeAgent(agente_id)) {
+    return res.status(404).json({ error: "Agente informado não existe" });
+  }
   verifyStatus(status);
   const novoCaso = casosRepository.create({
     titulo,
@@ -37,6 +40,9 @@ function updateCaso(req, res) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
   verifyStatus(status);
+  if (!validadeAgent(agente_id)) {
+    return res.status(404).json({ error: "Agente informado não existe" });
+  }
   const atualizado = casosRepository.update(req.params.id, {
     titulo,
     descricao,
@@ -50,10 +56,17 @@ function updateCaso(req, res) {
 
 // PATCH /casos/:id
 function patchCaso(req, res) {
-  const atualizado = casosRepository.patch(req.params.id, req.body);
+  const data = { ...req.body };
+  delete data.id; // Impede alteração do ID
+  if (data.status) {
+    verifyStatus(data.status);
+  }
+  if (!validadeAgent(data.agente_id)) {
+    return res.status(404).json({ error: "Agente informado não existe" });
+  }
+  const atualizado = casosRepository.patch(req.params.id, data);
   if (!atualizado)
     return res.status(404).json({ error: "Caso não encontrado" });
-  verifyStatus(atualizado.status);
   res.json(atualizado);
 }
 

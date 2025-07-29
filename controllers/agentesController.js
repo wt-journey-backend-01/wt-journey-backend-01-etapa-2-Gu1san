@@ -1,4 +1,5 @@
 const agentesRepository = require("../repositories/agentesRepository");
+const { verifyDate, validadeAgent } = require("../utils/erroHandler");
 
 // GET /casos
 function getAllAgentes(req, res) {
@@ -19,6 +20,9 @@ function createAgente(req, res) {
   if (!nome || !dataDeIncorporacao || !cargo) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
+  if (!verifyDate(dataDeIncorporacao)) {
+    return res.status(400).json({ error: "Data inválida" });
+  }
   const novoAgente = agentesRepository.create({
     nome,
     dataDeIncorporacao,
@@ -33,6 +37,9 @@ function updateAgente(req, res) {
   if (!nome || !dataDeIncorporacao || !cargo) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
+  if (!verifyDate(dataDeIncorporacao)) {
+    return res.status(400).json({ error: "Data inválida" });
+  }
   const atualizado = agentesRepository.update(req.params.id, {
     nome,
     dataDeIncorporacao,
@@ -45,7 +52,12 @@ function updateAgente(req, res) {
 
 // PATCH /casos/:id
 function patchAgente(req, res) {
-  const atualizado = agentesRepository.patch(req.params.id, req.body);
+  const data = { ...req.body };
+  if (!verifyDate(data.dataDeIncorporacao)) {
+    return res.status(400).json({ error: "Data inválida" });
+  }
+  delete data.id; // Impede alteração do ID
+  const atualizado = agentesRepository.patch(req.params.id, data);
   if (!atualizado)
     return res.status(404).json({ error: "Agente não encontrado" });
   res.json(atualizado);
