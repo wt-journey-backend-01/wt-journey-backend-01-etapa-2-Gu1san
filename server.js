@@ -5,8 +5,8 @@ const casosRoutes = require("./routes/casosRoutes");
 const PORT = 3000;
 
 app.use(express.json());
-app.use(agentesRoutes);
-app.use(casosRoutes);
+app.use("/agentes", agentesRoutes);
+app.use("/casos", casosRoutes);
 
 app.listen(PORT, () => {
   console.log(
