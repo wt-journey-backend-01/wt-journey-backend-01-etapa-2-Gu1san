@@ -35,7 +35,12 @@ function createCaso(req, res) {
 
 // PUT /casos/:id
 function updateCaso(req, res) {
-  const { titulo, descricao, status, agente_id } = req.body;
+  const { id, titulo, descricao, status, agente_id } = req.body;
+  if (id && id !== req.params.id) {
+    return res
+      .status(400)
+      .json({ error: "Não é permitido alterar o ID do caso" });
+  }
   if (!titulo || !descricao || !status || !agente_id) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
@@ -61,7 +66,7 @@ function patchCaso(req, res) {
   if (data.status) {
     verifyStatus(data.status);
   }
-  if (!validadeAgent(data.agente_id)) {
+  if (data.agente_id && !validadeAgent(data.agente_id)) {
     return res.status(404).json({ error: "Agente informado não existe" });
   }
   const atualizado = casosRepository.patch(req.params.id, data);

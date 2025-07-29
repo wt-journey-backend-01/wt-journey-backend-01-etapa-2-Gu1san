@@ -33,7 +33,12 @@ function createAgente(req, res) {
 
 // PUT /casos/:id
 function updateAgente(req, res) {
-  const { nome, dataDeIncorporacao, cargo } = req.body;
+  const { id, nome, dataDeIncorporacao, cargo } = req.body;
+  if (id && id !== req.params.id) {
+    return res
+      .status(400)
+      .json({ error: "Não é permitido alterar o ID do agente" });
+  }
   if (!nome || !dataDeIncorporacao || !cargo) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
@@ -53,7 +58,7 @@ function updateAgente(req, res) {
 // PATCH /casos/:id
 function patchAgente(req, res) {
   const data = { ...req.body };
-  if (!verifyDate(data.dataDeIncorporacao)) {
+  if (data.dataDeIncorporacao && !verifyDate(data.dataDeIncorporacao)) {
     return res.status(400).json({ error: "Data inválida" });
   }
   delete data.id; // Impede alteração do ID
