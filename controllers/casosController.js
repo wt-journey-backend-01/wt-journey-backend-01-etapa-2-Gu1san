@@ -1,4 +1,5 @@
 const casosRepository = require("../repositories/casosRepository");
+const { verifyStatus } = require("../utils/erroHandler");
 
 // GET /casos
 function getAllCasos(req, res) {
@@ -19,9 +20,7 @@ function createCaso(req, res) {
   if (!titulo || !descricao || !status || !agente_id) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
-  if (!["aberto", "solucionado"].includes(status)) {
-    return res.status(400).json({ error: "Status inválido" });
-  }
+  verifyStatus(status);
   const novoCaso = casosRepository.create({
     titulo,
     descricao,
@@ -37,6 +36,7 @@ function updateCaso(req, res) {
   if (!titulo || !descricao || !status || !agente_id) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
+  verifyStatus(status);
   const atualizado = casosRepository.update(req.params.id, {
     titulo,
     descricao,
@@ -53,6 +53,7 @@ function patchCaso(req, res) {
   const atualizado = casosRepository.patch(req.params.id, req.body);
   if (!atualizado)
     return res.status(404).json({ error: "Caso não encontrado" });
+  verifyStatus(atualizado.status);
   res.json(atualizado);
 }
 
