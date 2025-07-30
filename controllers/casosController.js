@@ -1,8 +1,9 @@
 const casosRepository = require("../repositories/casosRepository");
 const {
   verifyStatus,
-  validadeAgent,
+  verifyAgent,
   invalidPayloadResponse,
+  notFoundResponse,
 } = require("../utils/erroHandler");
 
 // GET /casos
@@ -14,12 +15,7 @@ function getAllCasos(req, res) {
 // GET /casos/:id
 function getCasoById(req, res) {
   const caso = casosRepository.findById(req.params.id);
-  if (!caso)
-    return invalidPayloadResponse(
-      res,
-      { case: "Caso não encontrado" },
-      "Caso não encontrado"
-    );
+  if (!caso) return notFoundResponse(res, "Caso não encontrado");
   res.json(caso);
 }
 
@@ -32,8 +28,8 @@ function createCaso(req, res) {
     errors.push({ fields: "Campos obrigatórios ausentes" });
   }
 
-  if (!validadeAgent(agente_id)) {
-    errors.push({ agent: "Agente informado não existe" });
+  if (!verifyAgent(agente_id)) {
+    return notFoundResponse(res, "Agente não encontrado");
   }
 
   if (!verifyStatus(status))
@@ -77,10 +73,8 @@ function updateCaso(req, res) {
       status: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'",
     });
 
-  if (!validadeAgent(agente_id)) {
-    errors.push({
-      agent: "Agente informado não existe",
-    });
+  if (!verifyAgent(agente_id)) {
+    return notFoundResponse(res, "Agente não encontrado");
   }
 
   if (errors.length > 0) {
@@ -94,12 +88,7 @@ function updateCaso(req, res) {
     agente_id,
   });
 
-  if (!atualizado)
-    return invalidPayloadResponse(
-      res,
-      { case: "Caso não encontrado" },
-      "Caso não encontrado"
-    );
+  if (!atualizado) return notFoundResponse(res, "Caso não encontrado");
 
   res.json(atualizado);
 }
@@ -115,7 +104,7 @@ function patchCaso(req, res) {
     Array.isArray(data) ||
     Object.keys(data).length === 0
   ) {
-    errors.push({ body: "Payload inválido ou vazio" });
+    return invalidPayloadResponse(res, { body: "Payload inválido ou vazio" });
   }
 
   if ("id" in data) {
@@ -132,22 +121,15 @@ function patchCaso(req, res) {
         });
   }
 
-  if (data.agente_id && !validadeAgent(data.agente_id)) {
-    errors.push({
-      agent: "Agente informado não existe",
-    });
+  if (data.agente_id && !verifyAgent(data.agente_id)) {
+    return notFoundResponse(res, "Agente não encontrado");
   }
 
   if (errors.length > 0) return invalidPayloadResponse(res, errors);
 
   const atualizado = casosRepository.patch(req.params.id, data);
 
-  if (!atualizado)
-    return invalidPayloadResponse(
-      res,
-      { case: "Caso não encontrado" },
-      "Caso não encontrado"
-    );
+  if (!atualizado) return notFoundResponse(res, "Caso não encontrado");
 
   res.json(atualizado);
 }
@@ -156,12 +138,7 @@ function patchCaso(req, res) {
 function deleteCaso(req, res) {
   const sucesso = casosRepository.remove(req.params.id);
 
-  if (!sucesso)
-    return invalidPayloadResponse(
-      res,
-      { case: "Caso não encontrado" },
-      "Caso não encontrado"
-    );
+  if (!sucesso) return notFoundResponse(res, "Caso não encontrado");
 
   res.status(204).send();
 }

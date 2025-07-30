@@ -20,7 +20,7 @@ function verifyDate(dateString) {
   return true;
 }
 
-function validadeAgent(agentID) {
+function verifyAgent(agentID) {
   const agenteExiste = agentesRepository.findById(agentID);
   if (!agenteExiste) {
     return false;
@@ -36,9 +36,14 @@ function invalidPayloadResponse(res, error, message = "Parâmetros inválidos") 
   });
 }
 
+function notFoundResponse(res, message) {
+  return res.status(404).json({ status: 404, error: message });
+}
+
 module.exports = {
   verifyStatus,
   verifyDate,
-  validadeAgent,
+  verifyAgent,
   invalidPayloadResponse,
+  notFoundResponse,
 };

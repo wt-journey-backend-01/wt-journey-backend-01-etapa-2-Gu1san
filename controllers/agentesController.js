@@ -1,5 +1,9 @@
 const agentesRepository = require("../repositories/agentesRepository");
-const { verifyDate, invalidPayloadResponse } = require("../utils/erroHandler");
+const {
+  verifyDate,
+  invalidPayloadResponse,
+  notFoundResponse,
+} = require("../utils/erroHandler");
 
 // GET /casos
 function getAllAgentes(req, res) {
@@ -65,12 +69,7 @@ function updateAgente(req, res) {
     dataDeIncorporacao,
     cargo,
   });
-  if (!atualizado)
-    return invalidPayloadResponse(
-      res,
-      { agent: "Agente não encontrado" },
-      "Agente não encontrado"
-    );
+  if (!atualizado) return notFoundResponse(res, "Agente não encontrado");
   res.json(atualizado);
 }
 
@@ -85,7 +84,7 @@ function patchAgente(req, res) {
     Array.isArray(data) ||
     Object.keys(data).length === 0
   ) {
-    errors.push({ body: "Payload inválido ou vazio" });
+    return invalidPayloadResponse(res, { body: "Payload inválido ou vazio" });
   }
 
   if ("id" in data) {
@@ -105,24 +104,14 @@ function patchAgente(req, res) {
   }
 
   const atualizado = agentesRepository.patch(req.params.id, data);
-  if (!atualizado)
-    return invalidPayloadResponse(
-      res,
-      { agent: "Agente não encontrado" },
-      "Agente não encontrado"
-    );
+  if (!atualizado) return notFoundResponse(res, "Agente não encontrado");
   res.json(atualizado);
 }
 
 // DELETE /casos/:id
 function deleteAgente(req, res) {
   const sucesso = agentesRepository.remove(req.params.id);
-  if (!sucesso)
-    return invalidPayloadResponse(
-      res,
-      { agent: "Agente não encontrado" },
-      "Agente não encontrado"
-    );
+  if (!sucesso) return notFoundResponse(res, "Agente não encontrado");
   res.status(204).send();
 }
 
