@@ -1,35 +1,36 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 3 créditos restantes para usar o sistema de feedback AI.
+Você tem 2 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para Gu1san:
 
-Nota final: **62.4/100**
+Nota final: **93.3/100**
 
-# Feedback para Gu1san 🚔✨
+Olá, Gu1san! 👋🚀
 
-Olá, Gu1san! Primeiro, parabéns pela dedicação e pelo esforço em montar essa API para o Departamento de Polícia! 🎉 Você estruturou seu projeto muito bem, com separação clara entre rotas, controladores e repositórios, o que é fundamental para manter o código organizado e escalável. Isso já mostra um ótimo entendimento da arquitetura MVC, e isso é um baita diferencial! 👏
-
----
-
-## O que você mandou muito bem 💪
-
-- **Estrutura do projeto:** Seu projeto está organizado exatamente como esperado, com pastas `routes`, `controllers`, `repositories` e `utils`. Isso facilita muito a manutenção e evolução do código.
-- **Implementação dos endpoints:** Você implementou todos os métodos HTTP básicos (GET, POST, PUT, PATCH, DELETE) para os recursos `/agentes` e `/casos`. Isso é essencial e você conseguiu cobrir essa parte.
-- **Validações e tratamento de erros:** Você fez um bom trabalho ao validar campos obrigatórios, formatos de data e status, além de garantir que o ID não seja alterado nas atualizações. Isso demonstra preocupação com a integridade dos dados.
-- **Retorno de status HTTP:** A maioria dos seus endpoints retorna os status corretos (201 para criação, 204 para exclusão, 400 para payload inválido etc.).
-- **Bônus:** Mesmo que alguns testes bônus não tenham passado, você já implementou algumas funcionalidades extras de filtragem e mensagens customizadas, o que mostra que você foi além do básico! 🚀
+Primeiramente, parabéns pelo esforço e pelo código bem organizado! 🎉 Você estruturou seu projeto com os arquivos e pastas essenciais, separando rotas, controladores e repositórios, o que é fundamental para manter o código limpo e escalável. Também gostei muito das validações que você implementou, especialmente tratando erros com respostas personalizadas e cuidando para não permitir alterações indevidas nos IDs — isso mostra atenção aos detalhes! 👏
 
 ---
 
-## Pontos para melhorar (com explicações e sugestões) 🔍
+## O que está muito legal no seu projeto
 
-### 1. Status 404 para recursos inexistentes (Agentes e Casos)
+- **Arquitetura modular:** Você dividiu bem as responsabilidades entre `routes/`, `controllers/` e `repositories/`. Isso é essencial para projetos Node.js com Express e facilita muito a manutenção.
+- **Validações robustas:** Você verifica campos obrigatórios, formatos de data, status válidos e existência de agentes relacionados. Isso ajuda a API a ser confiável.
+- **Tratamento de erros:** Funções como `invalidPayloadResponse` e `notFoundResponse` deixam seu código mais limpo e consistente.
+- **Uso correto dos status HTTP:** Você usa 201 para criação, 204 para deletar sem conteúdo e 404 para recurso não encontrado. Isso deixa sua API alinhada com boas práticas.
+- **Uso do UUID para IDs:** Ótimo para garantir unicidade e evitar bugs com IDs repetidos.
 
-Eu percebi que, ao tentar buscar, atualizar ou deletar agentes ou casos que não existem, sua API não está retornando o status HTTP 404 conforme esperado. Por exemplo, no seu `agentesController.js`, veja este trecho:
+Além disso, você implementou várias funcionalidades bônus, como filtros e ordenação, o que é um diferencial e mostra dedicação extra! 🌟 Isso é ótimo para seu aprendizado e portfólio!
+
+---
+
+## Pontos para melhorar — Vamos juntos destravar esses detalhes!
+
+### 1. Falha ao buscar agente inexistente retorna código 400, deveria ser 404
+
+Ao analisar seu `agentesController.js`, percebi que na função `getAgenteById` você faz isso:
 
 ```js
-// GET /agentes/:id
 function getAgenteById(req, res) {
   const agente = agentesRepository.findById(req.params.id);
   if (!agente)
@@ -38,138 +39,137 @@ function getAgenteById(req, res) {
 }
 ```
 
-Aqui, você chama `invalidPayloadResponse` para indicar que o agente não foi encontrado, mas provavelmente essa função está retornando um status 400 (Bad Request) ou outro código que não 404. O correto para recurso não encontrado é:
+Aqui, quando o agente não é encontrado, você chama `invalidPayloadResponse`, que provavelmente retorna **status 400 (Bad Request)**. Mas o correto para um recurso que não existe é retornar **404 (Not Found)**.
+
+Isso acontece porque o cliente fez uma requisição válida, mas o recurso não foi encontrado — não é um problema de payload inválido, mas sim de inexistência do recurso.
+
+**Como corrigir?** Use a função `notFoundResponse` para esse caso, que está disponível no seu `erroHandler` e você já usa em outros lugares, como:
 
 ```js
-return res.status(404).json({ error: "Agente não encontrado" });
-```
-
-O mesmo vale para os métodos `updateAgente`, `patchAgente` e `deleteAgente`, e também para os casos no `casosController.js`.
-
-**Por que isso é importante?**  
-O status 404 indica claramente para o cliente que o recurso solicitado não existe, o que ajuda no tratamento correto da resposta e melhora a comunicação da API.
-
-**Sugestão:** Reveja sua função `invalidPayloadResponse` e crie uma função específica para erros 404, ou ajuste seu uso para retornar o status correto. Por exemplo:
-
-```js
-function notFoundResponse(res, message) {
-  return res.status(404).json({ error: message });
+function getAgenteById(req, res) {
+  const agente = agentesRepository.findById(req.params.id);
+  if (!agente) return notFoundResponse(res, "Agente não encontrado");
+  res.json(agente);
 }
 ```
 
-E no controller:
-
-```js
-if (!agente) return notFoundResponse(res, "Agente não encontrado");
-```
+Assim, o status 404 será enviado corretamente quando o agente não existir. Isso deixa a API mais semântica e alinhada com o protocolo HTTP.
 
 ---
 
-### 2. Validação do payload para PATCH (atualização parcial)
+### 2. Atualização parcial (PATCH) com payload inválido não retorna 400 corretamente
 
-Outro ponto que percebi é que, ao tentar atualizar parcialmente um agente com um payload inválido (por exemplo, enviando um array ou um corpo vazio), sua API não retorna o status 400 corretamente.
+Você mencionou que ao tentar atualizar um agente parcialmente com PATCH e enviar um payload em formato incorreto, o status retornado não está correto.
 
-Veja no `patchAgente`:
+Analisando a função `patchAgente` no seu `agentesController.js`:
 
 ```js
-if (
-  !data ||
-  typeof data !== "object" ||
-  Array.isArray(data) ||
-  Object.keys(data).length === 0
-) {
-  errors.push({ body: "Payload inválido ou vazio" });
+function patchAgente(req, res) {
+  const errors = [];
+  const data = req.body;
+
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data) ||
+    Object.keys(data).length === 0
+  ) {
+    return invalidPayloadResponse(res, { body: "Payload inválido ou vazio" });
+  }
+
+  // ... validações e update
 }
 ```
 
-Esse trecho está correto para detectar payloads inválidos, mas o problema pode estar na forma como você chama `invalidPayloadResponse`. Verifique se essa função está retornando o status 400 quando o payload é inválido.
+Aqui você já faz uma validação do payload, o que é ótimo. Porém, o problema pode estar na implementação da função `invalidPayloadResponse` em `utils/erroHandler.js` — talvez ela não esteja enviando o status 400 corretamente, ou está sendo usada de forma inconsistente.
 
-Além disso, no `patchCaso` você fez uma verificação parecida, então é importante garantir que o tratamento de erros seja consistente e que o status correto seja retornado.
-
----
-
-### 3. Validação do agente_id no recurso "casos"
-
-Você fez uma verificação importante para garantir que o `agente_id` informado em um caso exista:
+Outra possibilidade é que o middleware `express.json()` não esteja configurado corretamente para interpretar JSON, mas no seu `server.js` vi que você tem:
 
 ```js
-if (!validadeAgent(agente_id)) {
-  errors.push({ agent: "Agente informado não existe" });
+app.use(express.json());
+```
+
+Então isso está certo.
+
+**Minha dica:** Verifique o conteúdo de `invalidPayloadResponse` para garantir que ela sempre retorne status 400. Caso queira, aqui está um exemplo simples de como essa função pode ser implementada:
+
+```js
+function invalidPayloadResponse(res, errors) {
+  return res.status(400).json({
+    errors,
+    message: "Payload inválido ou com campos incorretos",
+  });
 }
 ```
 
-Porém, percebi que o nome da função está como `validadeAgent` (com "d" extra), o que pode ser um erro de digitação. Se essa função não existir ou estiver mal implementada, a validação não ocorrerá corretamente, causando falha na criação ou atualização de casos.
-
-**Sugestão:** Confirme se essa função está implementada corretamente no `erroHandler.js` e se está exportada com o nome correto. O ideal seria algo como:
-
-```js
-const { verifyAgent } = require("../utils/errorHandler");
-```
-
-E usar `verifyAgent(agente_id)` para verificar se o agente existe.
+Se estiver diferente, ajuste para garantir que o status 400 seja enviado.
 
 ---
 
-### 4. Falta de implementação dos filtros e ordenações (Bônus)
+### 3. Bônus: filtros e mensagens customizadas de erro não foram implementados completamente
 
-Você tentou implementar filtros, ordenações e mensagens de erro customizadas, mas não consegui encontrar esses recursos no seu código. Por exemplo, não há manipulação de query params para filtrar casos por status ou agentes, nem ordenação por data de incorporação dos agentes.
+Notei que você tentou implementar filtros e ordenação, o que é excelente! Porém, algumas funcionalidades bônus relacionadas a filtros por status, agente responsável, keywords, ordenação por data, e mensagens customizadas de erro não foram finalizadas.
 
-Esses recursos são ótimos para melhorar a usabilidade da API e são um diferencial para sua nota.
+Isso é normal, porque esses recursos exigem um pouco mais de lógica e manipulação de arrays.
 
-**Sugestão:** Você pode implementar filtros simples usando `req.query`. Por exemplo, para filtrar casos por status:
+Se quiser, posso te dar uma dica rápida para começar a implementar um filtro simples, por exemplo, para filtrar casos por status:
 
 ```js
 function getAllCasos(req, res) {
-  let resultados = casosRepository.findAll();
-  const { status } = req.query;
-  if (status) {
-    resultados = resultados.filter(caso => caso.status === status);
+  let casos = casosRepository.findAll();
+
+  if (req.query.status) {
+    casos = casos.filter(caso => caso.status === req.query.status);
   }
-  res.json(resultados);
+
+  res.json(casos);
 }
 ```
 
-E para ordenação, você pode usar o método `sort` do JavaScript.
+Assim, você já permite que a rota `/casos?status=aberto` retorne só os casos com status "aberto".
 
 ---
 
-## Recomendações de estudos 📚
+### 4. Organização e nomenclatura dos arquivos
 
-Para te ajudar a aprimorar esses pontos, recomendo os seguintes recursos:
+Sua estrutura está muito boa! Só um ponto que pode ajudar na clareza:
 
-- **Tratamento correto de status HTTP 404 e 400:**  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400
+- O arquivo `utils/erroHandler.js` tem um pequeno erro de digitação no nome: o correto seria `errorHandler.js` (com dois "r"), pois "error" em inglês tem dois "r". Isso ajuda a manter os nomes consistentes e profissionais.
 
-- **Validação de dados em APIs Node.js/Express:**  
-  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_
+---
 
-- **Roteamento e organização de rotas no Express:**  
+## Recursos para você aprofundar e corrigir esses pontos
+
+- Para entender melhor como lidar com status HTTP e tratamento de erros:  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404
+
+- Para melhorar o roteamento e organização do Express:  
   https://expressjs.com/pt-br/guide/routing.html
 
-- **Arquitetura MVC aplicada a Node.js:**  
-  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
+- Para aprender sobre validação de dados em APIs Node.js/Express:  
+  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_
 
-- **Manipulação de arrays para filtros e ordenações:**  
+- Para manipular arrays e filtros em JavaScript (útil para os bônus):  
   https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI
 
 ---
 
-## Resumo rápido dos principais pontos para focar 🔑
+## Resumo rápido para você focar:
 
-- Ajustar o retorno dos status HTTP 404 para recursos não encontrados em todos os endpoints (GET, PUT, PATCH, DELETE).
-- Garantir que o status 400 seja retornado para payloads inválidos, especialmente em atualizações parciais (PATCH).
-- Conferir e corrigir a função de validação do `agente_id` para casos (`validadeAgent` → `verifyAgent` ou nome correto).
-- Implementar filtros, ordenações e mensagens customizadas para melhorar a API (bônus).
-- Revisar e, se necessário, criar funções específicas para tratamento de erros para garantir clareza e consistência nas respostas.
+- 🚩 Corrija o retorno do endpoint `getAgenteById` para usar status 404 quando o agente não existir (use `notFoundResponse`).
+- 🚩 Verifique se `invalidPayloadResponse` está retornando status 400 corretamente para payloads inválidos, especialmente no PATCH.
+- 🚩 Continue implementando os filtros e ordenações para os endpoints de casos e agentes para desbloquear os bônus.
+- 🚩 Ajuste o nome do arquivo `erroHandler.js` para `errorHandler.js` para manter a consistência.
+- ✅ Mantenha a organização modular e as boas práticas que você já aplicou!
 
 ---
 
-Gu1san, você está no caminho certo! Seu código já tem uma base sólida, e com esses ajustes você vai destravar muitas funcionalidades importantes e deixar sua API ainda mais robusta e profissional! 🚀
+Gu1san, seu projeto está muito bem encaminhado e você demonstrou uma ótima compreensão dos conceitos fundamentais de APIs REST com Express! 🎯 Com esses pequenos ajustes, sua API vai ficar ainda mais robusta e alinhada com as melhores práticas.
 
-Continue praticando, revisando seus códigos e testando bastante. Se precisar, volte aos vídeos que indiquei para fortalecer seu entendimento. Estou torcendo para ver você brilhar cada vez mais! 🌟
+Continue explorando, testando e aprimorando seu código! Se tiver dúvidas, volte aqui que estarei pronto para ajudar. 🚀✨
 
-Um abraço de Code Buddy! 🤖❤️
+Um abraço e até a próxima! 👊😄
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
