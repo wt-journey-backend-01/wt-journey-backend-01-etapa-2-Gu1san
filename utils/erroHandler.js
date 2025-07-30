@@ -3,8 +3,9 @@ const agentesRepository = require("../repositories/agentesRepository");
 function verifyStatus(status) {
   const validStatuses = ["aberto", "solucionado"];
   if (!validStatuses.includes(status)) {
-    return res.status(400).json({ error: "Status inválido" });
+    return false;
   }
+  return true;
 }
 
 function verifyDate(dateString) {
@@ -27,8 +28,17 @@ function validadeAgent(agentID) {
   return true;
 }
 
+function invalidPayloadResponse(res, error, message = "Parâmetros inválidos") {
+  return res.status(400).json({
+    status: 400,
+    message: message,
+    errors: error,
+  });
+}
+
 module.exports = {
   verifyStatus,
   verifyDate,
   validadeAgent,
+  invalidPayloadResponse,
 };

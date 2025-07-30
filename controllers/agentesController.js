@@ -1,5 +1,5 @@
 const agentesRepository = require("../repositories/agentesRepository");
-const { verifyDate, validadeAgent } = require("../utils/erroHandler");
+const { verifyDate, invalidPayloadResponse } = require("../utils/erroHandler");
 
 // GET /casos
 function getAllAgentes(req, res) {
@@ -10,18 +10,23 @@ function getAllAgentes(req, res) {
 // GET /casos/:id
 function getAgenteById(req, res) {
   const agente = agentesRepository.findById(req.params.id);
-  if (!agente) return res.status(404).json({ error: "Agente não encontrado" });
+  if (!agente)
+    return invalidPayloadResponse(res, { agent: "Agente não encontrado" });
   res.json(agente);
 }
 
 // POST /casos
 function createAgente(req, res) {
+  const errors = [];
   const { nome, dataDeIncorporacao, cargo } = req.body;
   if (!nome || !dataDeIncorporacao || !cargo) {
-    return res.status(400).json({ error: "Campos obrigatórios ausentes" });
+    errors.push({ fields: "Campos obrigatórios ausentes" });
   }
   if (!verifyDate(dataDeIncorporacao)) {
-    return res.status(400).json({ error: "Data inválida" });
+    errors.push({ date: "Data inválida" });
+  }
+  if (errors.length > 0) {
+    return invalidPayloadResponse(res, errors);
   }
   const novoAgente = agentesRepository.create({
     nome,
@@ -33,57 +38,91 @@ function createAgente(req, res) {
 
 // PUT /casos/:id
 function updateAgente(req, res) {
+  const errors = [];
   const { id, nome, dataDeIncorporacao, cargo } = req.body;
+
   if (id && id !== req.params.id) {
-    return res
-      .status(400)
-      .json({ error: "Não é permitido alterar o ID do agente" });
+    errors.push({
+      id: "Não é permitido alterar o ID do agente",
+    });
   }
   if (!nome || !dataDeIncorporacao || !cargo) {
-    return res.status(400).json({ error: "Campos obrigatórios ausentes" });
+    errors.push({
+      fields: "Campos obrigatórios ausentes",
+    });
   }
   if (!verifyDate(dataDeIncorporacao)) {
-    return res.status(400).json({ error: "Data inválida" });
+    errors.push({
+      date: "Data inválida",
+    });
   }
+  if (errors.length > 0) {
+    return invalidPayloadResponse(res, errors);
+  }
+
   const atualizado = agentesRepository.update(req.params.id, {
     nome,
     dataDeIncorporacao,
     cargo,
   });
   if (!atualizado)
-    return res.status(404).json({ error: "Agente não encontrado" });
+    return invalidPayloadResponse(
+      res,
+      { agent: "Agente não encontrado" },
+      "Agente não encontrado"
+    );
   res.json(atualizado);
 }
 
 // PATCH /casos/:id
 function patchAgente(req, res) {
-  if ("id" in req.body) {
-    return res
-      .status(400)
-      .json({ error: "Não é permitido alterar o ID do agente" });
+  const errors = [];
+  const data = req.body;
+
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data) ||
+    Object.keys(data).length === 0
+  ) {
+    errors.push({ body: "Payload inválido ou vazio" });
   }
 
-  const data = { ...req.body };
-
-  // Verificar se o body está vazio ou não é um objeto
-  if (!data || Object.keys(data).length === 0) {
-    return res.status(400).json({ error: "Payload inválido ou vazio" });
+  if ("id" in data) {
+    errors.push({
+      id: "Não é permitido alterar o ID do agente",
+    });
   }
 
   if (data.dataDeIncorporacao && !verifyDate(data.dataDeIncorporacao)) {
-    return res.status(400).json({ error: "Data inválida" });
+    errors.push({
+      date: "Data de incorporação inválida",
+    });
+  }
+
+  if (errors.length > 0) {
+    return invalidPayloadResponse(res, errors);
   }
 
   const atualizado = agentesRepository.patch(req.params.id, data);
   if (!atualizado)
-    return res.status(404).json({ error: "Agente não encontrado" });
+    return invalidPayloadResponse(
+      res,
+      { agent: "Agente não encontrado" },
+      "Agente não encontrado"
+    );
   res.json(atualizado);
 }
 
 // DELETE /casos/:id
 function deleteAgente(req, res) {
   const sucesso = agentesRepository.remove(req.params.id);
-  if (!sucesso) return res.status(404).json({ error: "Agente não encontrado" });
+  if (!sucesso)
+    return invalidPayloadResponse(
+      res,
+      { agent: "Agente não encontrado" },
+      "Agente não encontrado"
+    );
   res.status(204).send();
 }
 
