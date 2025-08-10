@@ -5,76 +5,91 @@ const {
   notFoundResponse,
 } = require("../utils/erroHandler");
 
-// GET /casos
-function getAllAgentes(req, res) {
-  const agentes = agentesRepository.findAll();
-  res.json(agentes);
+async function getAllAgentes(req, res) {
+  try {
+    const agentes = await agentesRepository.getAllAgentes();
+    res.json(agentes);
+  } catch (err) {
+    console.error("Erro ao buscar agentes:", err);
+    res.status(500).json({ error: "Erro ao buscar agentes" });
+  }
 }
 
-// GET /casos/:id
-function getAgenteById(req, res) {
-  const agente = agentesRepository.findById(req.params.id);
-  if (!agente)
-    return invalidPayloadResponse(res, { agent: "Agente não encontrado" });
-  res.json(agente);
+async function getAgenteById(req, res) {
+  try {
+    const agente = await agentesRepository.getAgenteById(req.params.id);
+    if (!agente) return notFoundResponse(res, "Agente não encontrado");
+    res.json(agente);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar agente" });
+  }
 }
 
-// POST /casos
-function createAgente(req, res) {
+async function getAgentesByCargo(req, res) {
+  try {
+    const agentes = await agentesRepository.getAgentesByCargo(req.query.cargo);
+    if (!agentes.length)
+      return notFoundResponse(res, "Agentes não encontrados");
+    res.json(agentes);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar agentes por cargo" });
+  }
+}
+
+async function createAgente(req, res) {
   const errors = [];
   const { nome, dataDeIncorporacao, cargo } = req.body;
+
   if (!nome || !dataDeIncorporacao || !cargo) {
     errors.push({ fields: "Campos obrigatórios ausentes" });
   }
   if (!verifyDate(dataDeIncorporacao)) {
     errors.push({ date: "Data inválida" });
   }
-  if (errors.length > 0) {
-    return invalidPayloadResponse(res, errors);
+  if (errors.length > 0) return invalidPayloadResponse(res, errors);
+
+  try {
+    const novoAgente = await agentesRepository.createAgente({
+      nome,
+      dataDeIncorporacao,
+      cargo,
+    });
+    res.status(201).json(novoAgente[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao criar agente" });
   }
-  const novoAgente = agentesRepository.create({
-    nome,
-    dataDeIncorporacao,
-    cargo,
-  });
-  res.status(201).json(novoAgente);
 }
 
-// PUT /casos/:id
-function updateAgente(req, res) {
+async function updateAgente(req, res) {
   const errors = [];
   const { id, nome, dataDeIncorporacao, cargo } = req.body;
 
   if (id && id !== req.params.id) {
-    errors.push({
-      id: "Não é permitido alterar o ID do agente",
-    });
+    errors.push({ id: "Não é permitido alterar o ID do agente" });
   }
   if (!nome || !dataDeIncorporacao || !cargo) {
-    errors.push({
-      fields: "Campos obrigatórios ausentes",
-    });
+    errors.push({ fields: "Campos obrigatórios ausentes" });
   }
   if (!verifyDate(dataDeIncorporacao)) {
-    errors.push({
-      date: "Data inválida",
-    });
+    errors.push({ date: "Data inválida" });
   }
-  if (errors.length > 0) {
-    return invalidPayloadResponse(res, errors);
-  }
+  if (errors.length > 0) return invalidPayloadResponse(res, errors);
 
-  const atualizado = agentesRepository.update(req.params.id, {
-    nome,
-    dataDeIncorporacao,
-    cargo,
-  });
-  if (!atualizado) return notFoundResponse(res, "Agente não encontrado");
-  res.json(atualizado);
+  try {
+    const atualizado = await agentesRepository.updateAgente(req.params.id, {
+      nome,
+      dataDeIncorporacao,
+      cargo,
+    });
+    if (!atualizado.length)
+      return notFoundResponse(res, "Agente não encontrado");
+    res.json(atualizado[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao atualizar agente" });
+  }
 }
 
-// PATCH /casos/:id
-function patchAgente(req, res) {
+async function patchAgente(req, res) {
   const errors = [];
   const data = req.body;
 
@@ -86,38 +101,38 @@ function patchAgente(req, res) {
   ) {
     return invalidPayloadResponse(res, { body: "Payload inválido ou vazio" });
   }
-
   if ("id" in data) {
-    errors.push({
-      id: "Não é permitido alterar o ID do agente",
-    });
+    errors.push({ id: "Não é permitido alterar o ID do agente" });
   }
-
   if (data.dataDeIncorporacao && !verifyDate(data.dataDeIncorporacao)) {
-    errors.push({
-      date: "Data de incorporação inválida",
-    });
+    errors.push({ date: "Data de incorporação inválida" });
   }
+  if (errors.length > 0) return invalidPayloadResponse(res, errors);
 
-  if (errors.length > 0) {
-    return invalidPayloadResponse(res, errors);
+  try {
+    const atualizado = await agentesRepository.patchAgente(req.params.id, data);
+    if (!atualizado.length)
+      return notFoundResponse(res, "Agente não encontrado");
+    res.json(atualizado[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao atualizar parcialmente agente" });
   }
-
-  const atualizado = agentesRepository.patch(req.params.id, data);
-  if (!atualizado) return notFoundResponse(res, "Agente não encontrado");
-  res.json(atualizado);
 }
 
-// DELETE /casos/:id
-function deleteAgente(req, res) {
-  const sucesso = agentesRepository.remove(req.params.id);
-  if (!sucesso) return notFoundResponse(res, "Agente não encontrado");
-  res.status(204).send();
+async function deleteAgente(req, res) {
+  try {
+    const sucesso = await agentesRepository.deleteAgente(req.params.id);
+    if (!sucesso) return notFoundResponse(res, "Agente não encontrado");
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao deletar agente" });
+  }
 }
 
 module.exports = {
   getAllAgentes,
   getAgenteById,
+  getAgentesByCargo,
   createAgente,
   updateAgente,
   patchAgente,

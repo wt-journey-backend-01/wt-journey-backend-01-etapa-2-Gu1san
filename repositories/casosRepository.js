@@ -1,63 +1,34 @@
-const { v4: uuidv4 } = require("uuid");
+const db = require("../db/db");
 
-const casos = [
-  {
-    id: "f5fb2ad5-22a8-4cb4-90f2-8733517a0d46",
-    titulo: "homicidio",
-    descricao:
-      "Disparos foram reportados às 22:33 do dia 10/07/2007 na região do bairro União, resultando na morte da vítima, um homem de 45 anos.",
-    status: "aberto",
-    agente_id: "401bccf5-cf9e-489d-8412-446cd169a0f1",
-  },
-];
-
-// LISTAR TODOS
-function findAll() {
-  return casos;
+async function getAllCasos() {
+  return await db("casos").select("*");
 }
 
-// BUSCAR POR ID
-function findById(id) {
-  console.log(`Buscando caso com ID: ${id}`);
-  return casos.find((c) => c.id === id);
+async function getCasoById(id) {
+  return await db("casos").where({ id }).first();
 }
 
-// CRIAR
-function create(caso) {
-  const novoCaso = { id: uuidv4(), ...caso };
-  casos.push(novoCaso);
-  return novoCaso;
+async function createCaso(caso) {
+  return await db("casos").insert(caso).returning("*");
 }
 
-// ATUALIZAR COMPLETO
-function update(id, data) {
-  const index = casos.findIndex((c) => c.id === id);
-  if (index === -1) return null;
-  casos[index] = { id, ...data };
-  return casos[index];
+async function updateCaso(id, caso) {
+  return await db("casos").where({ id }).update(caso).returning("*");
 }
 
-// ATUALIZAR PARCIAL
-function patch(id, data) {
-  const caso = findById(id);
-  if (!caso) return null;
-  Object.assign(caso, data);
-  return caso;
+async function deleteCaso(id) {
+  return await db("casos").where({ id }).del();
 }
 
-// DELETAR
-function remove(id) {
-  const index = casos.findIndex((c) => c.id === id);
-  if (index === -1) return false;
-  casos.splice(index, 1);
-  return true;
+async function getCasosByAgenteId(agenteId) {
+  return await db("casos").where({ agente_id: agenteId });
 }
 
 module.exports = {
-  findAll,
-  findById,
-  create,
-  update,
-  patch,
-  remove,
+  getAllCasos,
+  getCasoById,
+  createCaso,
+  updateCaso,
+  deleteCaso,
+  getCasosByAgenteId,
 };

@@ -7,20 +7,20 @@ const {
 } = require("../utils/erroHandler");
 
 // GET /casos
-function getAllCasos(req, res) {
-  const casos = casosRepository.findAll();
+async function getAllCasos(req, res) {
+  const casos = await casosRepository.findAll();
   res.json(casos);
 }
 
 // GET /casos/:id
-function getCasoById(req, res) {
-  const caso = casosRepository.findById(req.params.id);
+async function getCasoById(req, res) {
+  const caso = await casosRepository.findById(req.params.id);
   if (!caso) return notFoundResponse(res, "Caso não encontrado");
   res.json(caso);
 }
 
 // POST /casos
-function createCaso(req, res) {
+async function createCaso(req, res) {
   const { titulo, descricao, status, agente_id } = req.body;
   const errors = [];
 
@@ -28,20 +28,22 @@ function createCaso(req, res) {
     errors.push({ fields: "Campos obrigatórios ausentes" });
   }
 
-  if (!verifyAgent(agente_id)) {
+  const agenteExiste = await verifyAgent(agente_id);
+  if (!agenteExiste) {
     return notFoundResponse(res, "Agente não encontrado");
   }
 
-  if (!verifyStatus(status))
+  if (!verifyStatus(status)) {
     errors.push({
       status: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'",
     });
+  }
 
   if (errors.length > 0) {
     return invalidPayloadResponse(res, errors);
   }
 
-  const novoCaso = casosRepository.create({
+  const novoCaso = await casosRepository.create({
     titulo,
     descricao,
     status,
@@ -52,7 +54,7 @@ function createCaso(req, res) {
 }
 
 // PUT /casos/:id
-function updateCaso(req, res) {
+async function updateCaso(req, res) {
   const errors = [];
   const { id, titulo, descricao, status, agente_id } = req.body;
 
@@ -68,12 +70,14 @@ function updateCaso(req, res) {
     });
   }
 
-  if (!verifyStatus(status))
+  if (!verifyStatus(status)) {
     errors.push({
       status: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'",
     });
+  }
 
-  if (!verifyAgent(agente_id)) {
+  const agenteExiste = await verifyAgent(agente_id);
+  if (!agenteExiste) {
     return notFoundResponse(res, "Agente não encontrado");
   }
 
@@ -81,7 +85,7 @@ function updateCaso(req, res) {
     return invalidPayloadResponse(res, errors);
   }
 
-  const atualizado = casosRepository.update(req.params.id, {
+  const atualizado = await casosRepository.update(req.params.id, {
     titulo,
     descricao,
     status,
@@ -94,7 +98,7 @@ function updateCaso(req, res) {
 }
 
 // PATCH /casos/:id
-function patchCaso(req, res) {
+async function patchCaso(req, res) {
   const errors = [];
   const data = req.body;
 
@@ -113,21 +117,22 @@ function patchCaso(req, res) {
     });
   }
 
-  if (data.status) {
-    verifyStatus(data.status)
-      ? null
-      : errors.push({
-          status: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'",
-        });
+  if (data.status && !verifyStatus(data.status)) {
+    errors.push({
+      status: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'",
+    });
   }
 
-  if (data.agente_id && !verifyAgent(data.agente_id)) {
-    return notFoundResponse(res, "Agente não encontrado");
+  if (data.agente_id) {
+    const agenteExiste = await verifyAgent(data.agente_id);
+    if (!agenteExiste) {
+      return notFoundResponse(res, "Agente não encontrado");
+    }
   }
 
   if (errors.length > 0) return invalidPayloadResponse(res, errors);
 
-  const atualizado = casosRepository.patch(req.params.id, data);
+  const atualizado = await casosRepository.patch(req.params.id, data);
 
   if (!atualizado) return notFoundResponse(res, "Caso não encontrado");
 
@@ -135,8 +140,8 @@ function patchCaso(req, res) {
 }
 
 // DELETE /casos/:id
-function deleteCaso(req, res) {
-  const sucesso = casosRepository.remove(req.params.id);
+async function deleteCaso(req, res) {
+  const sucesso = await casosRepository.remove(req.params.id);
 
   if (!sucesso) return notFoundResponse(res, "Caso não encontrado");
 
